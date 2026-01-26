@@ -23,7 +23,8 @@ const FREE_MODELS = [
   { id: "google/gemma-2-9b-it:free", name: "Gemma 2 9B", provider: "Google" },
   { id: "mistralai/mistral-7b-instruct:free", name: "Mistral 7B", provider: "Mistral" },
   { id: "microsoft/phi-3-mini-128k-instruct:free", name: "Phi 3 Mini", provider: "Microsoft" },
-  { id: "qwen/qwen-2-7b-instruct:free", name: "Qwen 2 7B", provider: "Alibaba" }
+  { id: "qwen/qwen-2-7b-instruct:free", name: "Qwen 2 7B", provider: "Alibaba" },
+  { id: "huggingfaceh4/zephyr-7b-beta:free", name: "Zephyr 7B", provider: "HuggingFace" }
 ];
 
 const MODES = [
@@ -69,10 +70,20 @@ export default function App() {
   useEffect(() => {
     if (!s.user || !dbRef.current) return;
     const col = collection(dbRef.current, 'artifacts', 'room-ai-production', 'users', s.user.uid, 'conversations');
-    return onSnapshot(col, (sn) => {
+    return onSnapshot(col, async (sn) => {
       const list = sn.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+      if (list.length === 0) {
+         await addDoc(col, {
+            title: 'New Investigation', createdAt: Date.now(), messages: [], selectedModels: s.selectedModels
+          });
+         return;
+      }
+
       s.setConversations(list);
-      if (!s.activeId && list.length > 0) s.setActiveId(list[0].id);
+      if (!s.activeId || !list.find(c => c.id === s.activeId)) {
+        s.setActiveId(list[0].id);
+      }
     });
   }, [s.user?.uid]);
 
@@ -80,8 +91,10 @@ export default function App() {
 
   const handleSend = async () => {
     if (!input.trim() || s.isLoading || !s.activeId) return;
-    const p = input; setInput("");
     const convo = s.conversations.find(c => c.id === s.activeId);
+    if (!convo) return;
+
+    const p = input; setInput("");
     const addMsg = async (role, content, meta = {}) => {
       const msgs = [...(convo.messages || []), { role, content, metadata: meta, timestamp: Date.now() }];
       await updateDoc(doc(dbRef.current, 'artifacts', 'room-ai-production', 'users', s.user.uid, 'conversations', s.activeId), { messages: msgs });
