@@ -10,12 +10,12 @@ import {
 } from 'lucide-react';
 
 const CORE_CONFIG = {
-  apiKey: "AIzaSyBWuV0MeqZNdwCtGD385N3HjIj_3ni8Uic",
-  authDomain: "room-ai-5f04a.firebaseapp.com",
-  projectId: "room-ai-5f04a",
-  storageBucket: "room-ai-5f04a.firebasestorage.app",
-  messagingSenderId: "9408101224",
-  appId: "1:9408101224:web:2cefe9a2e95dd205f674dd"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const FREE_MODELS = [

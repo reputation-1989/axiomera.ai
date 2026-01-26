@@ -52,7 +52,7 @@ export class SimpleCouncilEngine {
 
     // 🔥 CACHE CHECK (LIVE only)
     if (RUN_MODE === "LIVE") {
-      const cached = getCachedResponse(prompt);
+      const cached = await getCachedResponse(prompt);
       if (cached) {
         return {
           ...cached,
@@ -98,7 +98,7 @@ export class SimpleCouncilEngine {
     };
 
     if (RUN_MODE === "LIVE") {
-      setCachedResponse(prompt, response);
+      await setCachedResponse(prompt, response);
     }
 
     return response;
