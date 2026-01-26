@@ -18,8 +18,8 @@ const LANGUAGE_MAP = {
 function extractCodeBlocks(text) {
     const codeBlocks = [];
     
-    // Match code blocks with language specification: ``````
-    const blockRegex = /``````/g;
+    // Match code blocks with language specification: ```language code```
+    const blockRegex = /```(\w+)?\s*([\s\S]*?)```/g;
     let match;
     
     while ((match = blockRegex.exec(text)) !== null) {

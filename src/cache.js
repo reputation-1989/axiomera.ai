@@ -1,32 +1,35 @@
-import fs from "fs";
+import fs from "fs/promises";
 import crypto from "crypto";
 
 const CACHE_FILE = "./cache.json";
 
-function loadCache() {
-  if (!fs.existsSync(CACHE_FILE)) {
-    fs.writeFileSync(CACHE_FILE, JSON.stringify({}), "utf-8");
+async function loadCache() {
+  try {
+    await fs.access(CACHE_FILE);
+  } catch {
+    await fs.writeFile(CACHE_FILE, JSON.stringify({}), "utf-8");
   }
-  return JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
+  const data = await fs.readFile(CACHE_FILE, "utf-8");
+  return JSON.parse(data);
 }
 
-function saveCache(cache) {
-  fs.writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2), "utf-8");
+async function saveCache(cache) {
+  await fs.writeFile(CACHE_FILE, JSON.stringify(cache, null, 2), "utf-8");
 }
 
 function hashPrompt(prompt) {
   return crypto.createHash("sha256").update(prompt).digest("hex");
 }
 
-export function getCachedResponse(prompt) {
-  const cache = loadCache();
+export async function getCachedResponse(prompt) {
+  const cache = await loadCache();
   const key = hashPrompt(prompt);
   return cache[key] || null;
 }
 
-export function setCachedResponse(prompt, response) {
-  const cache = loadCache();
+export async function setCachedResponse(prompt, response) {
+  const cache = await loadCache();
   const key = hashPrompt(prompt);
   cache[key] = response;
-  saveCache(cache);
+  await saveCache(cache);
 }
