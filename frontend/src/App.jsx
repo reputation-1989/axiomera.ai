@@ -65,6 +65,7 @@ export default function App() {
       onAuthStateChanged(auth, (u) => s.setUser(u));
       signInAnonymously(auth);
     } catch (e) { console.error(e); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -85,6 +86,7 @@ export default function App() {
         s.setActiveId(list[0].id);
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.user?.uid]);
 
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [s.conversations, s.isLoading]);
@@ -108,7 +110,10 @@ export default function App() {
       });
       const data = await res.json();
       await addMsg("assistant", data.finalAnswer, { sources: data.metadata?.sources, transcript: data.transcript });
-    } catch (e) { await addMsg("assistant", "Neural Link Timeout."); }
+    } catch (e) {
+        console.error(e);
+        await addMsg("assistant", "Neural Link Timeout.");
+    }
     s.setLoading(false);
   };
 
