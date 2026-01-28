@@ -95,7 +95,7 @@ export default function App() {
       });
       const data = await res.json();
       await addMsg("assistant", data.finalAnswer, { sources: data.metadata?.sources, transcript: data.transcript });
-    } catch (e) { await addMsg("assistant", "Neural Link Timeout."); }
+    } catch { await addMsg("assistant", "Neural Link Timeout."); }
     s.setLoading(false);
   };
 
@@ -194,7 +194,28 @@ export default function App() {
           <div className="flex justify-between items-center border-b border-white/5 pb-10"><h3 className="text-[12px] font-black uppercase text-blue-500 tracking-widest">forensics_trace</h3><button onClick={() => setShowTrace(null)} className="text-zinc-500 hover:text-white">✕</button></div>
           <div className="flex-1 overflow-y-auto space-y-12 no-scrollbar">
             {showTrace.metadata.transcript.map((step, idx) => (
-              <div key={idx} className="space-y-6"><div className="text-[11px] font-black text-zinc-700 uppercase tracking-widest">{step.phase}</div><div className="p-8 bg-white/5 rounded-[2.5rem] text-[15px] font-mono text-zinc-400 border border-white/5 leading-relaxed shadow-inner">{step.output}</div></div>
+              <div key={idx} className="space-y-6">
+                <div className="text-[11px] font-black text-zinc-700 uppercase tracking-widest">{step.phase}</div>
+                {step.output && <div className="p-8 bg-white/5 rounded-[2.5rem] text-[15px] font-mono text-zinc-400 border border-white/5 leading-relaxed shadow-inner">{step.output}</div>}
+                {(step.modelA || step.modelB) && !step.phase.includes('execution') && (
+                   <div className="grid grid-cols-1 gap-4">
+                      {step.modelA && <div className="p-6 bg-white/5 rounded-3xl border border-white/5"><div className="mb-2 text-[10px] font-bold text-blue-400">MODEL A</div><div className="text-[13px] font-mono text-zinc-400 whitespace-pre-wrap">{step.modelA}</div></div>}
+                      {step.modelB && <div className="p-6 bg-white/5 rounded-3xl border border-white/5"><div className="mb-2 text-[10px] font-bold text-purple-400">MODEL B</div><div className="text-[13px] font-mono text-zinc-400 whitespace-pre-wrap">{step.modelB}</div></div>}
+                   </div>
+                )}
+                {step.phase === 'execution' && (
+                   <div className="grid grid-cols-1 gap-4">
+                      {step.modelA && <div className="p-6 bg-black/40 rounded-3xl border border-white/5"><div className="mb-2 text-[10px] font-bold text-green-400">EXEC A</div><div className="text-[13px] font-mono text-green-200/70 whitespace-pre-wrap">{step.modelA}</div></div>}
+                      {step.modelB && <div className="p-6 bg-black/40 rounded-3xl border border-white/5"><div className="mb-2 text-[10px] font-bold text-green-400">EXEC B</div><div className="text-[13px] font-mono text-green-200/70 whitespace-pre-wrap">{step.modelB}</div></div>}
+                   </div>
+                )}
+                {step.critiqueA && (
+                   <div className="space-y-4">
+                      <div className="p-6 bg-red-500/5 rounded-3xl border border-red-500/10"><div className="mb-2 text-[10px] font-bold text-red-400">CRITIQUE A</div><div className="text-[13px] font-mono text-zinc-400 whitespace-pre-wrap">{step.critiqueA}</div></div>
+                      {step.critiqueB && <div className="p-6 bg-red-500/5 rounded-3xl border border-red-500/10"><div className="mb-2 text-[10px] font-bold text-red-400">CRITIQUE B</div><div className="text-[13px] font-mono text-zinc-400 whitespace-pre-wrap">{step.critiqueB}</div></div>}
+                   </div>
+                )}
+              </div>
             ))}
           </div>
         </aside>

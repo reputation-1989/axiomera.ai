@@ -12,6 +12,9 @@ export class AdvancedDebateEngine {
   }
 
   async call(model, prompt, maxTokens = 900) {
+    if (this.client.apiKey === 'mock' || process.env.RUN_MODE === 'MOCK') {
+      return `[MOCK OUTPUT from ${model}] Response to: ${prompt.slice(0, 30)}...`;
+    }
     const res = await this.client.chat.completions.create({
       model,
       messages: [{ role: "user", content: prompt }],
