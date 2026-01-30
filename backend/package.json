@@ -8,12 +8,10 @@
     "dev": "node --watch src/index.js"
   },
   "dependencies": {
-    "@huggingface/inference": "^4.13.4",
     "axios": "^1.13.2",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.22.1",
-    "firebase": "^12.7.0",
     "openai": "^6.15.0"
   }
 }

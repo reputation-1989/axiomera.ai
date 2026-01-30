@@ -10,12 +10,12 @@ import {
 } from 'lucide-react';
 
 const CORE_CONFIG = {
-  apiKey: "AIzaSyBWuV0MeqZNdwCtGD385N3HjIj_3ni8Uic",
-  authDomain: "room-ai-5f04a.firebaseapp.com",
-  projectId: "room-ai-5f04a",
-  storageBucket: "room-ai-5f04a.firebasestorage.app",
-  messagingSenderId: "9408101224",
-  appId: "1:9408101224:web:2cefe9a2e95dd205f674dd"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const FREE_MODELS = [
@@ -51,6 +51,10 @@ const useStore = create((set) => ({
 
 export default function App() {
   const s = useStore();
+  const setUser = useStore(state => state.setUser);
+  const userUid = useStore(state => state.user?.uid);
+  const setConversations = useStore(state => state.setConversations);
+  const setActiveId = useStore(state => state.setActiveId);
   const [input, setInput] = useState("");
   const [showTrace, setShowTrace] = useState(null);
   const scrollRef = useRef(null);
@@ -61,20 +65,21 @@ export default function App() {
       const app = !getApps().length ? initializeApp(CORE_CONFIG) : getApp();
       dbRef.current = getFirestore(app);
       const auth = getAuth(app);
-      onAuthStateChanged(auth, (u) => s.setUser(u));
+      onAuthStateChanged(auth, (u) => setUser(u));
       signInAnonymously(auth);
     } catch (e) { console.error(e); }
-  }, []);
+  }, [setUser]);
 
   useEffect(() => {
-    if (!s.user || !dbRef.current) return;
-    const col = collection(dbRef.current, 'artifacts', 'room-ai-production', 'users', s.user.uid, 'conversations');
+    if (!userUid || !dbRef.current) return;
+    const col = collection(dbRef.current, 'artifacts', 'room-ai-production', 'users', userUid, 'conversations');
     return onSnapshot(col, (sn) => {
       const list = sn.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
-      s.setConversations(list);
-      if (!s.activeId && list.length > 0) s.setActiveId(list[0].id);
+      setConversations(list);
+      const currentActiveId = useStore.getState().activeId;
+      if (!currentActiveId && list.length > 0) setActiveId(list[0].id);
     });
-  }, [s.user?.uid]);
+  }, [userUid, setConversations, setActiveId]);
 
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [s.conversations, s.isLoading]);
 
@@ -95,7 +100,7 @@ export default function App() {
       });
       const data = await res.json();
       await addMsg("assistant", data.finalAnswer, { sources: data.metadata?.sources, transcript: data.transcript });
-    } catch (e) { await addMsg("assistant", "Neural Link Timeout."); }
+    } catch (e) { console.error(e); await addMsg("assistant", "Neural Link Timeout."); }
     s.setLoading(false);
   };
 
