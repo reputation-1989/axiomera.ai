@@ -1,82 +1,81 @@
 import OpenAI from "openai";
 import { performWebSearch } from "../search.js";
 
+const PRESETS = {
+  general: { architect: "Lead Architect: Logical & Helpful.", auditor: "Critical Auditor: Fact-checker.", synthesizer: "Synthesizer: Balanced." },
+  coding: { architect: "Senior Developer: Clean Code.", auditor: "Security Specialist: Edge Cases.", synthesizer: "Tech Lead: Optimized." },
+  academic: { architect: "Scholar: Theoretical Depth.", auditor: "Peer Reviewer: Logical Rigor.", synthesizer: "Professor: Clarity." },
+  research: { architect: "Analyst: Pattern Discovery.", auditor: "Counter-Intelligence: Verification.", synthesizer: "Director: Summary." }
+};
+
 export class DynamicCouncilEngine {
   constructor(models, apiKey) {
     this.client = new OpenAI({
       baseURL: "https://openrouter.ai/api/v1",
       apiKey
     });
-    this.models = models;
+    this.models = models && models.length > 0 ? models : ["meta-llama/llama-3.3-70b-instruct:free"];
   }
 
-  async call(model, prompt, system = "") {
-    const res = await this.client.chat.completions.create({
-      model,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: prompt }
-      ],
-      temperature: 0.3,
-    });
-    return res.choices[0]?.message?.content || "";
+  async chat(model, messages, systemPrompt) {
+    try {
+      const msgs = [{ role: "system", content: systemPrompt }, ...messages];
+      const res = await this.client.chat.completions.create({
+        model: model,
+        messages: msgs,
+        temperature: 0.3,
+      });
+      return res.choices[0]?.message?.content || "";
+    } catch (e) {
+      return `Error with ${model}: ${e.message}`;
+    }
   }
 
-  async run(prompt) {
+  async run(prompt, history = [], preset = "general") {
     const transcript = [];
-    let researchData = null;
-
-    // 1. RESEARCH PHASE
-    const searchQuery = await this.call(
-      this.models[0], 
-      `Based on this user prompt, write a single search query to get the most up-to-date information: "${prompt}"`,
-      "You are a search query optimizer."
-    );
+    const roles = PRESETS[preset] || PRESETS.general;
     
-    researchData = await performWebSearch(searchQuery);
+    // 1. Web Search
+    const searchData = await performWebSearch(prompt);
+    let context = searchData ? `\n\n[LIVE_DATA]:\n${JSON.stringify(searchData)}` : "";
     
-    if (researchData) {
+    if (searchData) {
       transcript.push({ 
-        phase: "Web Research", 
-        output: researchData.map(d => `Source: ${d.title} (${d.url})`).join('\n') 
+        phase: "Grounding",
+        output: `Retrieved ${searchData.length} live research points.`
       });
     }
 
-    const context = researchData 
-      ? `REAL-TIME RESEARCH DATA:\n${JSON.stringify(researchData)}\n\nUSER PROMPT: ${prompt}`
-      : prompt;
-
-    // 2. INITIAL SOLUTION
-    let currentSolution = await this.call(
+    // 2. Architect
+    // Uses the last 6 messages from history for context, plus the current prompt with research context
+    const currentMessages = [...history.slice(-6), { role: "user", content: prompt + context }];
+    let draft = await this.chat(
       this.models[0], 
-      `Using the research provided (if any), solve this carefully: ${context}`
+      currentMessages,
+      roles.architect
     );
-    transcript.push({ phase: `Initial Solution (${this.models[0].split('/').pop()})`, output: currentSolution });
+    transcript.push({ phase: "Architect", output: draft });
 
-    // 3. ADVERSARIAL DEBATE
-    for (let i = 1; i < this.models.length; i++) {
-      const model = this.models[i];
-      const critique = await this.call(
-        model, 
-        `Critique this solution. Check for facts against the research. Provide a better version: ${currentSolution}`,
-        "You are a rigorous logic verifier."
+    // 3. Auditor & Synthesizer (if multiple models are available)
+    if (this.models.length > 1) {
+      let audit = await this.chat(
+        this.models[1],
+        [{ role: "user", content: `Audit this: ${draft}` }],
+        roles.auditor
       );
-      currentSolution = critique;
-      transcript.push({ phase: `Refinement (${model.split('/').pop()})`, output: currentSolution });
+      transcript.push({ phase: "Auditor", output: audit });
+
+      draft = await this.chat(
+        this.models[0],
+        [{ role: "user", content: `Prompt: ${prompt}\nDraft: ${draft}\nAudit: ${audit}` }],
+        roles.synthesizer
+      );
     }
 
-    // 4. FINAL SYNTHESIS
-    const finalAnswer = await this.call(
-      this.models[0], 
-      `Look at the research and the debate. Provide the definitive final answer: ${currentSolution}`
-    );
-    transcript.push({ phase: "Final Synthesis", output: finalAnswer });
-
     return {
-      success: true,
-      finalAnswer,
+      finalAnswer: draft,
       transcript,
-      metadata: { mode: "COUNCIL", grounded: !!researchData }
+      metadata: { sources: searchData || [] }
     };
   }
 }
