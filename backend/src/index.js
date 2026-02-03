@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import OpenAI from "openai";
 import axios from "axios";
+import { performWebSearch } from "./search.js";
 
 dotenv.config();
 const app = express();
@@ -20,17 +21,6 @@ const PRESETS = {
   academic: { architect: "Scholar: Theoretical Depth.", auditor: "Peer Reviewer: Logical Rigor.", synthesizer: "Professor: Clarity." },
   research: { architect: "Analyst: Pattern Discovery.", auditor: "Counter-Intelligence: Verification.", synthesizer: "Director: Summary." }
 };
-
-async function performWebSearch(query) {
-  const tavilyKey = process.env.TAVILY_API_KEY;
-  if (!tavilyKey || !tavilyKey.startsWith("tvly")) return null;
-  try {
-    const res = await axios.post('https://api.tavily.com/search', {
-      api_key: tavilyKey, query, search_depth: "smart", max_results: 5
-    });
-    return res.data.results.map(r => ({ title: r.title, url: r.url }));
-  } catch (error) { return null; }
-}
 
 async function askAI(model, history, systemPrompt) {
   const messages = [{ role: "system", content: systemPrompt }, ...history];
